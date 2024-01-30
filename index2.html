@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Altameer Companies Database</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column; /* Stack the title and container vertically */
+            text-align: center; /* Center the text within the title */
+            height: 100vh;
+        }
+        #header {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #f0f0f0;
+            padding: 20px;
+            box-sizing: border-box;
+            margin-bottom: 20px;
+        }
+        #logo img {
+            max-height: 50px; /* Set the max height of the logo */
+            margin-right: 20px; /* Add some spacing between the logo and the title */
+        }
+        h1 {
+            margin: 0; /* Remove default margin */
+        }
+        #container {
+            flex: 1;
+            display: flex;
+            height: 100%;
+        }
+        #first-column {
+            width: 200px;
+            background-color: #f0f0f0;
+            padding: 20px;
+            box-sizing: border-box;
+            height: 100%;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column; /* Stack children vertically */
+            justify-content: space-between; /* Align children at the start and end of the container */
+        }
+        button {
+            margin-top: auto;
+            margin-bottom: 20px; /* Add some spacing below the button */
+        }
+        #second-column {
+            flex: 1;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .collection-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .collection-list-item {
+            cursor: pointer;
+            margin-bottom: 10px;
+            padding: 8px;
+            background-color: #ddd;
+        }
+        .collection-list-item.selected {
+            background-color: #a0c0ff; /* Adjust the background color as needed */
+        }
+        #content {
+            font-size: 18px;
+        }
+        /* Style for the modal overlay */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            justify-content: Right;
+            align-items: Right;
+        }
+        /* Style for the modal */
+        .modal {
+            background: #fff;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            width: 300px;
+        }
+        /* Style for the form elements in the modal */
+        #new-collection-form {
+            display: grid;
+            grid-row-gap: 10px;
+        }
+        label {
+            font-weight: bold;
+            text-align: left; /* Align labels to the left */
+            display: block; /* Ensure labels are on a new line */
+            margin-bottom: 5px; /* Add some spacing below each label */
+        }
+        /* Style for form input fields */
+        input {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div id="header">
+        <div id="logo">
+            <!-- Add your logo image here -->
+            <img src="/TL.jpg" alt="Company Logo">
+        </div>
+        <h1>Altameer Companies Database</h1>
+    </div>
+    <div id="container">
+        <div id="first-column">
+            <h2>Companies</h2>
+            <ul id="collection-list" class="collection-list">
+                <!-- Collections will be dynamically populated here -->
+            </ul>
+
+            <!-- Button to open the new collection modal -->
+            <button onclick="openNewCollectionModal()">Create New Collection</button>
+
+            <!-- Modal for creating a new collection -->
+            <div class="modal-overlay" id="new-collection-modal">
+                <div class="modal">
+                    <form id="new-collection-form">
+                        <label for="new-collection-name">New Collection Name:</label>
+                        <input type="text" id="new-collection-name" required>
+
+                        <label for="product-name">Product Name:</label>
+                        <input type="text" id="product-name" required>
+
+                        <label for="product-details">Product Details:</label>
+                        <input type="text" id="product-details" required>
+
+                        <label for="product-location">Product Location:</label>
+                        <input type="text" id="product-location" required>
+
+                        <label for="product-documents">Product Documents:</label>
+                        <input type="text" id="product-documents" required>
+
+                        <button type="button" onclick="createNewCollection()">Create New Collection</button>
+                        <button type="button" onclick="closeNewCollectionModal()">Cancel</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div id="second-column">
+            <div id="content">Select a collection to view information.</div>
+        </div>
+    </div>
+
+    <script>
+        // Fetch collections from the server and populate the left column as a list
+        async function fetchCollections() {
+            try {
+                const response = await fetch('/collections'); // Updated endpoint
+                const collections = await response.json();
+
+                const collectionList = document.getElementById('collection-list');
+                collectionList.innerHTML = ''; // Clear previous content
+
+                collections.forEach(collection => {
+                    const listItem = document.createElement('li');
+                    listItem.className = 'collection-list-item';
+                    listItem.textContent = collection;
+                    listItem.addEventListener('click', () => showContent(collection, listItem));
+                    collectionList.appendChild(listItem);
+                });
+            } catch (error) {
+                console.error('Error fetching collections:', error.message);
+            }
+        }
+
+        // Fetch content for a selected collection and display it in the right column
+        async function showContent(collection, listItem) {
+            try {
+                // Highlight the selected collection
+                clearSelection();
+                listItem.classList.add('selected');
+
+                const response = await fetch(`/collection/${collection}`);
+                const content = await response.json();
+
+                // Update the content in the second column
+                document.getElementById('content').innerHTML = `<pre>${JSON.stringify(content, null, 2)}</pre>`;
+            } catch (error) {
+                console.error('Error fetching collection content:', error.message);
+            }
+        }
+
+        // Clear selection from all list items
+        function clearSelection() {
+            const listItems = document.querySelectorAll('.collection-list-item');
+            listItems.forEach(item => item.classList.remove('selected'));
+        }
+
+        // Function to open the new collection modal
+        function openNewCollectionModal() {
+            document.getElementById('new-collection-modal').style.display = 'flex';
+        }
+
+        // Function to close the new collection modal
+        function closeNewCollectionModal() {
+            document.getElementById('new-collection-modal').style.display = 'none';
+        }
+
+        // Function to create a new collection
+        async function createNewCollection() {
+            const newCollectionName = document.getElementById('new-collection-name').value;
+            const productName = document.getElementById('product-name').value;
+            const productDetails = document.getElementById('product-details').value;
+            const productLocation = document.getElementById('product-location').value;
+            const productDocuments = document.getElementById('product-documents').value;
+
+            try {
+                const response = await fetch('/create-collection', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        collectionName: newCollectionName,
+                        productName,
+                        productDetails,
+                        productLocation,
+                        productDocuments,
+                    }),
+                });
+
+                const result = await response.json();
+                console.log('Response:', response);
+                console.log('Result:', result);
+
+                if (result.success) {
+                    // Close the modal
+                    closeNewCollectionModal();
+
+                    // Clear input values
+                    document.getElementById('new-collection-name').value = '';
+                    document.getElementById('product-name').value = '';
+                    document.getElementById('product-details').value = '';
+                    document.getElementById('product-location').value = '';
+                    document.getElementById('product-documents').value = '';
+
+                    // Refresh the collections list
+                    fetchCollections();
+                } else {
+                    console.error('Error creating new collection:', result.error);
+                }
+            } catch (error) {
+                console.error('Error creating new collection:', error.message);
+            }
+        }
+
+        // Fetch collections when the page loads
+        window.onload = () => {
+            fetchCollections();
+        };
+    </script>
+
+</body>
+</html>
